@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ajouter un favori</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 600px; margin: 40px auto; padding: 20px;">
+        <h2>Ajouter un favori</h2>
+        
+        <form method="POST">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="url"><strong>URL :</strong></label><br>
+                <input type="text" id="url" name="url" value="{{ url }}" required style="width: 100%; padding: 8px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="title"><strong>Titre :</strong></label><br>
+                <input type="text" id="title" name="title" value="{{ title }}" style="width: 100%; padding: 8px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="desc"><strong>Description :</strong></label><br>
+                <textarea id="desc" name="desc" rows="4" style="width: 100%; padding: 8px;">{{ desc }}</textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="tags"><strong>Tags (séparés par des espaces ou virgules) :</strong></label><br>
+                <input type="text" id="tags" name="tags" placeholder="ex: python web dev" style="width: 100%; padding: 8px;">
+            </div>
+
+            <button type="submit" class="btn" style="padding: 10px 20px; background-color: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer;">Enregistrer</button>
+        </form>
+    </div>
+</body>
+</html>

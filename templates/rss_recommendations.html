@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Recommandations de flux RSS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Recommandations de flux RSS</h1>
+        <p>
+            <a href="{{ url_for('index') }}">← Retour aux favoris</a> | 
+            <a href="{{ url_for('top_domains') }}">Top Domaines</a> | 
+            <a href="{{ url_for('tools') }}">Outils</a>
+        </p>
+
+        <div class="card">
+            <h3>Flux RSS suggérés d'après vos sites les plus visités</h3>
+            <p style="color: #718096; font-size: 0.95em;">
+                Ces suggestions ciblent les noms de domaines où vous enregistrez le plus de liens. Vous pouvez tester directement les liens de flux ci-dessous dans votre lecteur RSS.
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #cbd5e0; text-align: left;">
+                        <th style="padding: 8px;">Site / Domaine</th>
+                        <th style="padding: 8px;">Contexte</th>
+                        <th style="padding: 8px; text-align: right;">Liens directs RSS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feed in suggested_feeds %}
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 8px; font-weight: bold;">
+                            <a href="https://{{ feed.name }}" target="_blank">{{ feed.name }}</a>
+                        </td>
+                        <td style="padding: 8px; color: #4a5568; font-size: 0.9em;">
+                            {{ feed.reason }}
+                        </td>
+                        <td style="padding: 8px; text-align: right;">
+                            <a href="{{ feed.rss_url }}" target="_blank" class="btn" style="padding: 4px 8px; font-size: 0.85em; text-decoration: none;">RSS 1</a>
+                            <a href="{{ feed.alt_rss }}" target="_blank" class="btn" style="padding: 4px 8px; font-size: 0.85em; text-decoration: none; background-color: #4a5568;">RSS 2</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3>Vos centres d'intérêt principaux (Tags)</h3>
+            <p style="color: #718096; font-size: 0.95em;">
+                Vos recherches ou abonnements RSS extérieurs (sur des annuaires comme OPML ou Feedly) pourraient s'orienter vers vos mots-clés phares :
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                {% for tag, count in top_tags %}
+                <span style="background: #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 0.9em;">
+                    <strong>#{{ tag }}</strong> <span style="color: #718096;">({{ count }})</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Optimisation des tags par IA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function copyPrompt() {
+            const promptText = document.getElementById("ai-prompt").innerText;
+            navigator.clipboard.writeText(promptText).then(() => {
+                alert("Prompt copié dans le presse-papier !");
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Optimisation collaborative des tags</h1>
+        <p>
+            <a href="{{ url_for('index') }}">← Retour aux favoris</a> | 
+            <a href="{{ url_for('tools') }}">Outils</a>
+        </p>
+
+        {% if message %}
+            <div class="alert" style="background: #edf2f7; padding: 10px; border-left: 4px solid #3182ce; margin-bottom: 20px;">
+                {{ message }}
+            </div>
+        {% endif %}
+
+        <!-- Étape 1 : Exportation -->
+        <div class="card">
+            <h3>Étape 1 : Télécharger la liste des tags</h3>
+            <p>Téléchargez le fichier CSV contenant tous vos tags actuels et leurs occurrences.</p>
+            <a href="{{ url_for('export_tags_csv') }}" class="btn" style="text-decoration: none; display: inline-block; margin-top: 10px;">
+                📥 Télécharger tags_to_optimize.csv
+            </a>
+        </div>
+
+        <!-- Étape 2 : Le Prompt pour l'IA -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>Étape 2 : Instructions pour l'IA</h3>
+            <p>Envoyez votre fichier CSV à une IA (ou copiez-collez les données) avec le prompt ci-dessous. L'IA doit corriger les fautes de frappe, harmoniser les anglicismes/francismes, fusionner les doublons pertinents ou éclater les tags trop larges, puis vous renvoyer un fichier CSV propre.</p>
+            
+            <button onclick="copyPrompt()" class="btn" style="background-color: #4a5568; margin-bottom: 10px;">
+                📋 Copier le prompt ci-dessous
+            </button>
+
+            <div id="ai-prompt" style="background: #f7fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; color: #2d3748;">Tu es un assistant expert en structuration de données et en gestion de connaissances. Je vais te fournir (ou je t'ai joint) un fichier CSV listant mes tags de favoris web avec leurs occurrences.
+
+Ton rôle est de nettoyer et d'optimiser cette taxonomie en suivant ces règles strictes :
+1. **Correction des fautes de frappe** et des variations orthographiques (ex: "python3" vs "python").
+2. **Gestion des synonymes et anglicismes** : harmoniser les choix (tout en français ou tout en anglais selon la cohérence globale, ex: fusionner "network" et "reseau" si pertinent).
+3. **Fusions et Séparations** : fusionner les tags redondants, ou au contraire proposer d'éclater un tag trop fourre-tout en plusieurs sous-tags si nécessaire.
+4. **Format de sortie obligatoire** : Tu dois me restituer un fichier CSV au format exact avec 3 colonnes : `ancien_tag`, `occurrence`, `nouveau_tag`. 
+   - La première colonne (`ancien_tag`) reprend l'ancien nom exact.
+   - La deuxième colonne (`occurrence`) garde le chiffre d'origine.
+   - La troisième colonne (`nouveau_tag`) indique le tag corrigé ou fusionné (si un ancien tag doit être éclaté en plusieurs nouveaux tags, sépare-les par un espace ou une virgule dans cette même colonne).
+
+Ne réponds que par le contenu du fichier CSV final prêt à être enregistré, sans texte superflux autour.</div>
+        </div>
+
+        <!-- Étape 3 : Import du CSV corrigé -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>Étape 3 : Importer le CSV corrigé par l'IA</h3>
+            <p>Une fois que l'IA vous a généré le CSV optimisé, enregistrez-le sur votre ordinateur et uploadez-le ci-dessous pour appliquer les modifications en masse sur vos favoris.</p>
+            
+            <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
+                <input type="hidden" name="action" value="import_csv">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <input type="file" name="csv_file" accept=".csv" required>
+                </div>
+                <button type="submit" class="btn">🚀 Appliquer les optimisations de l'IA</button>
+            </form>
+        </div>
+
+        <!-- Aperçu rapide des tags actuels -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>Aperçu de vos tags actuels ({{ sorted_tags|length }} uniques)</h3>
+            <div style="max-height: 200px; overflow-y: auto; margin-top: 10px; border: 1px solid #e2e8f0; padding: 10px;">
+                <ul style="margin: 0; padding-left: 20px;">
+                    {% for tag, count in sorted_tags %}
+                    <li><strong>#{{ tag }}</strong> ({{ count }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

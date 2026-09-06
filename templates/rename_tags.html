@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Renommage de masse des tags</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Gestion des tags</h1>
+        <p><a href="{{ url_for('index') }}">← Retour aux favoris</a> | <a href="{{ url_for('tools') }}">Outils</a></p>
+
+        {% if message %}
+            <div class="alert">{{ message }}</div>
+        {% endif %}
+
+        <form method="POST" class="card">
+            <h3>Renommer ou fusionner des tags en masse</h3>
+            <p>Indiquez un ou plusieurs tags cibles (séparés par des espaces ou des virgules) à remplacer par un nouveau nom unique.</p>
+            
+            <div class="form-group">
+                <label for="old_tags">Tag(s) cible(s) à remplacer (ex: <code>p2p, torrent</code> ou <code>reseau</code>) :</label>
+                <input type="text" id="old_tags" name="old_tags" required placeholder="Anciens tags...">
+            </div>
+
+            <div class="form-group">
+                <label for="new_tag">Nouveau nom de tag unique :</label>
+                <input type="text" id="new_tag" name="new_tag" required placeholder="Nouveau tag...">
+            </div>
+
+            <button type="submit" class="btn">Appliquer le renommage</button>
+        </form>
+    </div>
+</body>
+</html>

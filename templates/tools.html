@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Outils - Bookmarkholic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 800px; margin: 40px auto; padding: 20px;">
+        <h1 style="color: #2d3748;">Outils & Gestion</h1>
+        <p>
+            <a href="{{ url_for('index') }}" style="color: #3182ce; text-decoration: none;">← Retour aux favoris</a>
+        </p>
+
+        <!-- Section IA -->
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 6px; margin-top: 20px;">
+            <h3 style="margin-top: 0; color: #2b6cb0;">🤖 Intelligence Artificielle & Taxonomie</h3>
+            <p style="color: #4a5568;">Nettoyez, fusionnez et corrigez vos tags en collaboration avec une IA via un système d'export/import CSV.</p>
+            <a href="{{ url_for('optimize_tags') }}" class="btn" style="display: inline-block; background: #3182ce; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; margin-top: 5px;">Optimiser les tags avec l'IA</a>
+        </div>
+
+        <!-- Section Statistiques -->
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 6px; margin-top: 20px;">
+            <h3 style="margin-top: 0; color: #2b6cb0;">📊 Statistiques & Analyses</h3>
+            <ul style="padding-left: 20px; line-height: 1.8; color: #2d3748;">
+                <li><a href="{{ url_for('top_domains') }}" style="color: #3182ce; text-decoration: none;">Top des noms de domaines</a> — Classement de vos sources web les plus fréquentes.</li>
+                <li><a href="{{ url_for('tags_by_year') }}" style="color: #3182ce; text-decoration: none;">Évolution des tags par année</a> — Comparez vos centres d'intérêt année par année.</li>
+            </ul>
+        </div>
+
+        <!-- Section Gestion de masse -->
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 6px; margin-top: 20px;">
+            <h3 style="margin-top: 0; color: #2b6cb0;">🛠️ Gestion & Données</h3>
+            <ul style="padding-left: 20px; line-height: 1.8; color: #2d3748;">
+                <li><a href="{{ url_for('rename_tags') }}" style="color: #3182ce; text-decoration: none;">Renommer ou fusionner manuellement des tags</a></li>
+                <li><a href="{{ url_for('import_export') }}" style="color: #3182ce; text-decoration: none;">Importer / Exporter des favoris (HTML Shaarli / Netscape)</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

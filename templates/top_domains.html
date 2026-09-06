@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Top des noms de domaines - Bookmarkholic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 800px; margin: 40px auto; padding: 20px;">
+        <h1 style="color: #2d3748;">Top des noms de domaines</h1>
+        <p>
+            <a href="{{ url_for('index') }}" style="color: #3182ce; text-decoration: none;">← Retour aux favoris</a> | 
+            <a href="{{ url_for('tools') }}" style="color: #3182ce; text-decoration: none;">Outils</a>
+        </p>
+
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 6px; margin-top: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #cbd5e0; text-align: left;">
+                        <th style="padding: 10px; color: #4a5568;">Domaine</th>
+                        <th style="padding: 10px; text-align: right; color: #4a5568;">Nombre de favoris</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for domain, count in sorted_domains %}
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 10px;">
+                            <a href="{{ url_for('index', search=domain) }}" style="color: #2b6cb0; text-decoration: none; font-weight: bold;" title="Filtrer les favoris de ce domaine">
+                                {{ domain }}
+                            </a>
+                        </td>
+                        <td style="padding: 10px; text-align: right; color: #718096; font-weight: bold;">
+                            {{ count }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2" style="padding: 20px; text-align: center; color: #718096;">Aucun domaine trouvé.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

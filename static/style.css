@@ -1,0 +1,27 @@
+.tag-list {
+    list-style: none;
+    padding: 0;
+}
+
+.tag-list li {
+    margin-bottom: 6px;
+}
+
+.tag-list a {
+    display: flex;
+    justify-content: space-between;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #333;
+}
+
+.tag-list a:hover, .tag-list a.active {
+    background-color: #e2e8f0;
+    font-weight: bold;
+}
+
+.tag-list .count {
+    color: #718096;
+    font-size: 0.9em;
+}

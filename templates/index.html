@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bookmarkholic</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 900px; margin: 40px auto; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 style="margin: 0; color: #2d3748;">Bookmarkholic</h1>
+            <a href="{{ url_for('tools') }}" class="btn" style="text-decoration: none; background: #4a5568; color: white; padding: 8px 12px; border-radius: 4px;">🛠️ Outils & IA</a>
+        </div>
+
+        <!-- Formulaire d'ajout rapide -->
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 6px; margin-bottom: 30px;">
+            <h3 style="margin-top: 0; color: #2b6cb0;">Ajouter un favori</h3>
+            <form action="{{ url_for('add_bookmark') }}" method="POST">
+                <div style="margin-bottom: 10px;">
+                    <input type="url" name="url" placeholder="URL (https://...)" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <input type="text" name="title" placeholder="Titre" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <textarea name="desc" placeholder="Description" rows="2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;"></textarea>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <input type="text" name="tags" placeholder="Tags séparés par des espaces" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <button type="submit" style="background: #3182ce; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">Ajouter</button>
+            </form>
+        </div>
+
+        <!-- Liste des favoris au format carte détaillé -->
+        <h2 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Mes Favoris</h2>
+        
+        <div style="margin-top: 20px;">
+            {% for bookmark in bookmarks %}
+            <div style="background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <!-- Titre cliquable -->
+                <h3 style="margin: 0 0 10px 0; font-size: 1.1em;">
+                    <a href="{{ bookmark.url }}" target="_blank" style="color: #2b6cb0; text-decoration: none; font-weight: bold;">{{ bookmark.title or bookmark.url }}</a>
+                </h3>
+                
+                <!-- Description / Contenu -->
+                {% if bookmark.description %}
+                <div style="margin: 0 0 12px 0; color: #4a5568; font-size: 0.95em; line-height: 1.5; white-space: pre-line;">{{ bookmark.description }}</div>
+                {% endif %}
+                
+                <!-- Tags en pastilles -->
+                {% if bookmark.tags %}
+                <div style="margin-bottom: 12px;">
+                    {% for tag in bookmark.tags.split() %}
+                    <span style="background: #edf2f7; color: #4a5568; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; margin-right: 5px; display: inline-block;">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Barre d'actions du bas (style Shaarli) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #edf2f7; padding-top: 10px; font-size: 0.85em; color: #718096;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" style="cursor: pointer;">
+                        <span style="cursor: pointer;" title="Éditer">✏️</span>
+                        <span style="cursor: pointer;" title="Supprimer">🗑️</span>
+                        <span style="cursor: pointer;" title="Épingler">📌</span>
+                        <span>{{ bookmark.add_date }} * · <a href="#" style="color: #718096; text-decoration: none;">permalien</a></span>
+                    </div>
+                    <div>
+                        <a href="{{ bookmark.url }}" target="_blank" style="color: #2b6cb0; text-decoration: none; word-break: break-all;">🔗 {{ bookmark.url }}</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p style="color: #718096; text-align: center; padding: 20px;">Aucun favori pour le moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
