@@ -4,7 +4,10 @@ import sqlite3
 import re
 from datetime import datetime
 from html.parser import HTMLParser
-from flask import Flask, render_template_string, request, redirect, url_for, Response
+from flask import Flask, render_template_string, request, redirect, url_for, Response, render_template
+from database import get_db, init_db
+from datetime import datetime
+from collections import Counter
 
 app = Flask(__name__)
 DB_NAME = 'bookmarks.sqlite3'
@@ -198,20 +201,44 @@ def optimize_tags():
 
 @app.route('/tags-by-year')
 def tags_by_year():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    bookmarks = conn.execute("SELECT add_date, tags FROM bookmarks").fetchall()
+    conn = get_db()
+    selected_year = request.args.get('year', type=int)
+    
+    # 1. On récupère tous les add_date pour extraire les années en Python (évite les soucis de version SQLite)
+    cursor = conn.execute("SELECT add_date, tags FROM bookmarks WHERE add_date IS NOT NULL")
+    rows = cursor.fetchall()
+    
+    years_set = set()
+    tag_counter = Counter()
+    
+    for row in rows:
+        try:
+            timestamp = int(row['add_date'])
+            dt = datetime.fromtimestamp(timestamp)
+            yr = str(dt.year)
+            years_set.add(yr)
+            
+            # 2. Si une année est sélectionnée, on calcule les tags correspondants à la volée
+            if selected_year and dt.year == selected_year and row['tags']:
+                for t in row['tags'].split():
+                    clean_t = t.strip()
+                    if clean_t:
+                        tag_counter[clean_t] += 1
+                        
+        except (ValueError, TypeError):
+            continue
+            
+    available_years = sorted(list(years_set), reverse=True)
+    tag_cloud = tag_counter.most_common() if selected_year else []
+    
     conn.close()
     
-    years_data = {}
-    for b in bookmarks:
-        dt = datetime.fromtimestamp(b['add_date'] if b['add_date'] else time.time())
-        year = dt.strftime('%Y')
-        if year not in years_data:
-            years_data[year] = 0
-        years_data[year] += 1
-        
-    return render_template_string(TAGS_BY_YEAR_TEMPLATE, years_data=years_data)
+    return render_template(
+        'tags_by_year.html',
+        available_years=available_years,
+        selected_year=selected_year,
+        tag_cloud=tag_cloud
+    )
 
 @app.route('/rename-tags', methods=['GET', 'POST'])
 def rename_tags():

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tags par année - Bookmarkholic</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; background: #f9f9f9; color: #333; }
+        .years-nav { display: flex; gap: 10px; margin-bottom: 2rem; flex-wrap: wrap; }
+        .years-nav a { padding: 6px 12px; background: #e0e0e0; text-decoration: none; border-radius: 4px; color: #333; }
+        .years-nav a.active { background: #2c3e50; color: #fff; }
+        
+        .tag-cloud { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: center; padding: 2rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .tag-item { text-decoration: none; color: #3498db; transition: transform 0.2s; }
+        .tag-item:hover { color: #2980b9; transform: scale(1.1); }
+        
+        .size-1 { font-size: 0.9rem; opacity: 0.7; }
+        .size-2 { font-size: 1.2rem; opacity: 0.85; }
+        .size-3 { font-size: 1.6rem; opacity: 1; font-weight: bold; }
+        .size-4 { font-size: 2.2rem; opacity: 1; font-weight: bold; color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>Statistiques et Nuage de tags par année</h1>
+    <p><a href="/">← Retour aux favoris</a></p>
+
+    <!-- Navigation par année -->
+    <div class="years-nav">
+        {% if available_years %}
+            {% for yr in available_years %}
+                <a href="/tags-by-year?year={{ yr }}" class="{% if selected_year|string == yr %}active{% endif %}">{{ yr }}</a>
+            {% endfor %}
+        {% else %}
+            <p><em>Aucune année trouvée dans la base de données.</em></p>
+        {% endif %}
+    </div>
+
+    <!-- Affichage du nuage si une année est choisie -->
+    {% if selected_year %}
+        <h2>Nuage de tags pour l'année {{ selected_year }}</h2>
+        
+        {% if tag_cloud %}
+            <div class="tag-cloud">
+                {% set max_count = tag_cloud[0][1] if tag_cloud else 1 %}
+                {% for tag, count in tag_cloud %}
+                    {% set ratio = count / max_count %}
+                    {% if ratio > 0.75 %}
+                        {% set size_class = "size-4" %}
+                    {% elif ratio > 0.4 %}
+                        {% set size_class = "size-3" %}
+                    {% elif ratio > 0.2 %}
+                        {% set size_class = "size-2" %}
+                    {% else %}
+                        {% set size_class = "size-1" %}
+                    {% endif %}
+                    
+                    <a href="/?tag={{ tag }}" class="tag-item {{ size_class }}" title="{{ count }} occurrence(s)">
+                        {{ tag }} <small>({{ count }})</small>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Aucun tag trouvé pour cette année.</p>
+        {% endif %}
+    {% else %}
+        {% if available_years %}
+            <p>Veuillez sélectionner une année ci-dessus pour afficher les tags marquants.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
