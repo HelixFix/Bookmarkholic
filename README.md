@@ -56,9 +56,12 @@ Pour ajouter rapidement n'importe quelle page web à votre instance locale Bookm
 
 1. Créer le Bookmarklet
 Créez un nouveau favori dans la barre des signets de votre navigateur web, donnez-lui le nom de ➕ Shaare, et collez le code JavaScript suivant dans le champ URL / Adresse :
-javascript:void(window.open('http://localhost:5000/add?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)+'&selection='+encodeURIComponent(window.getSelection()), '_blank', 'width=600,height=650'));
 
-2. Fonctionnement
+``` Javascript
+javascript:void(window.open('http://localhost:5000/add?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)+'&selection='+encodeURIComponent(window.getSelection()), '_blank', 'width=600,height=650'));
+```
+
+3. Fonctionnement
 - Lorsque vous naviguez sur le web et que vous cliquez sur ce favori, une fenêtre pop-up s'ouvre pour enregistrer le lien.
 - Si le lien existe déjà en base, le formulaire se préemplit automatiquement avec ses informations actuelles pour vous permettre de le mettre à jour.
 - Si le lien est nouveau, l'URL et le titre de la page active sont récupérés. De plus, si vous avez préalablement surligné/sélectionné du texte sur la page, celui-ci est automatiquement injecté dans le champ Description.
