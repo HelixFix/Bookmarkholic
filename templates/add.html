@@ -138,15 +138,14 @@
             </div>
 
             <div class="form-group">
-                <label for="tags">Tags</label>
-                <!-- Champ avec autocomplétion par datalist -->
-                <input type="text" id="tags" name="tags" value="{{ bookmark.tags }}" list="existing-tags" placeholder="espaces ou virgules">
-                <datalist id="existing-tags">
-                    {% for tag in unique_tags %}
-                        <option value="{{ tag }}">
-                    {% endfor %}
-                </datalist>
-            </div>
+    <label for="tags">Tags</label>
+    <!-- On ajoute un ID et on stocke la liste complète dans un attribut data-all-tags -->
+    <input type="text" id="tag-input" name="tags" value="{{ bookmark.tags }}" list="existing-tags" placeholder="espaces ou virgules" autocomplete="off">
+    
+    <datalist id="existing-tags">
+        <!-- Les options seront générées dynamiquement par le JS -->
+    </datalist>
+</div>
 
             <div class="checkbox-group">
                 <input type="checkbox" id="private" name="private" {% if bookmark.private %}checked{% endif %}>
@@ -156,6 +155,37 @@
             <button type="submit" class="btn-submit">Enregistrer</button>
         </form>
     </div>
+<!-- On injecte la liste de tags Python proprement sous forme de tableau JSON -->
+<script>
+    const allTags = {{ unique_tags | tojson }};
+    
+    const input = document.getElementById('tag-input');
+    const datalist = document.getElementById('existing-tags');
 
+    input.addEventListener('input', function() {
+        // On récupère le mot actuellement en train d'être tapé (gère le dernier mot après un espace)
+        const val = this.value;
+        const words = val.split(/[\s,]+/);
+        const currentWord = words[words.length - 1].toLowerCase();
+
+        // On vide la liste actuelle
+        datalist.innerHTML = '';
+
+        if (currentWord.length > 0) {
+            // On filtre uniquement les tags qui COMMENCENT par currentWord
+            const matches = allTags.filter(tag => tag.toLowerCase().startsWith(currentWord));
+            
+            // On reconstruit les options de la datalist
+            matches.forEach(tag => {
+                const option = document.createElement('option');
+                // Reconstituer la chaîne avec les tags précédents + le tag complété
+                const prefix = val.substring(0, val.lastIndexOf(words[words.length - 1]));
+                option.value = prefix + tag; 
+                datalist.appendChild(option);
+            });
+        }
+    });
+</script>
 </body>
+
 </html>
