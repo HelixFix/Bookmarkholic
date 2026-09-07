@@ -137,14 +137,12 @@
                 <textarea id="description" name="description">{{ bookmark.description }}</textarea>
             </div>
 
-            <div class="form-group">
-    <label for="tags">Tags</label>
-    <!-- On ajoute un ID et on stocke la liste complète dans un attribut data-all-tags -->
-    <input type="text" id="tag-input" name="tags" value="{{ bookmark.tags }}" list="existing-tags" placeholder="espaces ou virgules" autocomplete="off">
+            <div class="form-group" style="position: relative;">
+    <label for="tag-input">Tags</label>
+    <input type="text" id="tag-input" name="tags" value="{{ bookmark.tags }}" placeholder="espaces ou virgules" autocomplete="off">
     
-    <datalist id="existing-tags">
-        <!-- Les options seront générées dynamiquement par le JS -->
-    </datalist>
+    <!-- Boîte de suggestions personnalisée -->
+    <div id="suggestions-box" style="display: none; position: absolute; left: 0; right: 0; background: white; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
 </div>
 
             <div class="checkbox-group">
@@ -158,31 +156,58 @@
 <!-- On injecte la liste de tags Python proprement sous forme de tableau JSON -->
 <script>
     const allTags = {{ unique_tags | tojson }};
-    
     const input = document.getElementById('tag-input');
-    const datalist = document.getElementById('existing-tags');
+    const box = document.getElementById('suggestions-box');
 
     input.addEventListener('input', function() {
-        // On récupère le mot actuellement en train d'être tapé (gère le dernier mot après un espace)
         const val = this.value;
         const words = val.split(/[\s,]+/);
         const currentWord = words[words.length - 1].toLowerCase();
 
-        // On vide la liste actuelle
-        datalist.innerHTML = '';
+        box.innerHTML = '';
 
-        if (currentWord.length > 0) {
-            // On filtre uniquement les tags qui COMMENCENT par currentWord
-            const matches = allTags.filter(tag => tag.toLowerCase().startsWith(currentWord));
-            
-            // On reconstruit les options de la datalist
-            matches.forEach(tag => {
-                const option = document.createElement('option');
-                // Reconstituer la chaîne avec les tags précédents + le tag complété
-                const prefix = val.substring(0, val.lastIndexOf(words[words.length - 1]));
-                option.value = prefix + tag; 
-                datalist.appendChild(option);
+        if (currentWord.length === 0) {
+            box.style.display = 'none';
+            return;
+        }
+
+        // Filtre strict : commence par currentWord
+        const matches = allTags.filter(tag => tag.toLowerCase().startsWith(currentWord));
+
+        if (matches.length === 0) {
+            box.style.display = 'none';
+            return;
+        }
+
+        // Création des items de la liste
+        matches.forEach(tag => {
+            const div = document.createElement('div');
+            div.textContent = tag;
+            div.style.padding = '8px 12px';
+            div.style.cursor = 'pointer';
+            div.style.borderBottom = '1px solid #eee';
+
+            div.addEventListener('mouseenter', () => div.style.backgroundColor = '#f1f2f6');
+            div.addEventListener('mouseleave', () => div.style.backgroundColor = 'white');
+
+            // Au clic sur une suggestion
+            div.addEventListener('click', function() {
+                words[words.length - 1] = tag; // Remplace le mot en cours par le tag choisi
+                input.value = words.join(' ') + ' '; // Ajoute un espace pour enchaîner
+                box.style.display = 'none';
+                input.focus();
             });
+
+            box.appendChild(div);
+        });
+
+        box.style.display = 'block';
+    });
+
+    // Fermer la liste si on clique en dehors
+    document.addEventListener('click', function(e) {
+        if (!input.contains(e.target) && !box.contains(e.target)) {
+            box.style.display = 'none';
         }
     });
 </script>
