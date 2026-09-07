@@ -285,16 +285,8 @@ def top_domains():
 def add_bookmark():
     conn = get_db()
     
-    # Valeurs par défaut (si on arrive sur la page normalement)
-    bookmark_data = {
-        'url': request.args.get('url', ''),
-        'title': request.args.get('title', ''),
-        'description': request.args.get('selection', ''),
-        'tags': ''
-    }
-
     if request.method == 'POST':
-        # Récupération des données du formulaire soumis
+        # Récupération et insertion en base de données
         url = request.form.get('url')
         title = request.form.get('title')
         description = request.form.get('description')
@@ -302,7 +294,6 @@ def add_bookmark():
         private = 1 if request.form.get('private') else 0
         add_date = int(time.time())
         
-        # Insertion ou mise à jour en base de données
         conn.execute('''
             INSERT INTO bookmarks (url, title, description, tags, add_date, private)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -314,10 +305,10 @@ def add_bookmark():
         conn.commit()
         conn.close()
         
-        # Redirection vers l'accueil après enregistrement
-        return redirect(url_for('index'))
+        # Fermeture automatique de la pop-up du bookmarklet après soumission
+        return render_template_string('<script>window.close();</script>')
 
-    # Récupération des tags existants pour l'autocomplétion (<datalist>)
+    # 1. Extraction de tous les tags uniques pour l'autocomplétion (<datalist>)
     cursor = conn.execute("SELECT tags FROM bookmarks WHERE tags IS NOT NULL")
     all_tags = set()
     for row in cursor:
@@ -326,10 +317,18 @@ def add_bookmark():
                 if t.strip():
                     all_tags.add(t.strip())
     unique_tags = sorted(list(all_tags))
+
+    # 2. Pré-remplissage via les paramètres GET de l'URL du bookmarklet
+    bookmark = {
+        'url': request.args.get('url', ''),
+        'title': request.args.get('title', ''),
+        'description': request.args.get('selection', ''), # Récupère aussi le texte surligné si présent
+        'tags': '',
+        'private': 0
+    }
+    
     conn.close()
-
-    return render_template('add.html', bookmark=bookmark_data, unique_tags=unique_tags)
-
+    return render_template('add.html', bookmark=bookmark, unique_tags=unique_tags)
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     conn = sqlite3.connect(DB_NAME)
@@ -626,4 +625,4 @@ textarea { height: 120px; }
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=False, port=5000)
+    app.run(debug=True, port=5000)
