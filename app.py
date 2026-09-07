@@ -281,35 +281,54 @@ def top_domains():
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
     return render_template_string(TOP_DOMAINS_TEMPLATE, domains=sorted_domains)
 
-@app.route('/add', methods=['POST'])
+@app.route('/add', methods=['GET', 'POST'])
 def add_bookmark():
-    url = request.form.get('url')
-    if not url:
-        return redirect(url_for('index'))
+    conn = get_db()
+    
+    # Valeurs par défaut (si on arrive sur la page normalement)
+    bookmark_data = {
+        'url': request.args.get('url', ''),
+        'title': request.args.get('title', ''),
+        'description': request.args.get('selection', ''),
+        'tags': ''
+    }
+
+    if request.method == 'POST':
+        # Récupération des données du formulaire soumis
+        url = request.form.get('url')
+        title = request.form.get('title')
+        description = request.form.get('description')
+        tags = request.form.get('tags')
+        private = 1 if request.form.get('private') else 0
+        add_date = int(time.time())
         
-    title = request.form.get('title') or url
-    description = request.form.get('description', '')
-    tags = request.form.get('tags', '')
-    private = 1 if request.form.get('private') else 0
-    add_date = int(time.time())
-    
-    tags_cleaned = " ".join([t.strip() for t in re.split(r'[\s,]+', tags) if t.strip()])
-    
-    conn = sqlite3.connect(DB_NAME)
-    try:
-        conn.execute(
-            "INSERT INTO bookmarks (url, title, description, tags, add_date, private) VALUES (?, ?, ?, ?, ?, ?)",
-            (url, title, description, tags_cleaned, add_date, private)
-        )
+        # Insertion ou mise à jour en base de données
+        conn.execute('''
+            INSERT INTO bookmarks (url, title, description, tags, add_date, private)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                description = excluded.description,
+                tags = excluded.tags
+        ''', (url, title, description, tags, add_date, private))
         conn.commit()
-    except sqlite3.IntegrityError:
-        conn.execute(
-            "UPDATE bookmarks SET title = ?, description = ?, tags = ?, private = ? WHERE url = ?",
-            (title, description, tags_cleaned, private, url)
-        )
-        conn.commit()
+        conn.close()
+        
+        # Redirection vers l'accueil après enregistrement
+        return redirect(url_for('index'))
+
+    # Récupération des tags existants pour l'autocomplétion (<datalist>)
+    cursor = conn.execute("SELECT tags FROM bookmarks WHERE tags IS NOT NULL")
+    all_tags = set()
+    for row in cursor:
+        if row['tags']:
+            for t in row['tags'].split():
+                if t.strip():
+                    all_tags.add(t.strip())
+    unique_tags = sorted(list(all_tags))
     conn.close()
-    return redirect(url_for('index'))
+
+    return render_template('add.html', bookmark=bookmark_data, unique_tags=unique_tags)
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
