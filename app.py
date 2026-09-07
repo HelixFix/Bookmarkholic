@@ -8,6 +8,9 @@ from flask import Flask, render_template_string, request, redirect, url_for, Res
 from database import get_db, init_db
 from datetime import datetime
 from collections import Counter
+from datetime import datetime
+
+
 
 app = Flask(__name__)
 DB_NAME = 'bookmarks.sqlite3'
@@ -39,6 +42,7 @@ def init_db():
 
 @app.route('/')
 def index():
+
     search = request.args.get('q', '').strip()
     tag_filter = request.args.get('tag', '').strip()
     page = request.args.get('page', 1, type=int)
@@ -81,12 +85,35 @@ def index():
         
     bookmarks = cursor.fetchall()
     conn.close()
+
+# On réutilise exactement la même logique de formatage pour les dates
+    formatted_bookmarks = []
+    for b in bookmarks:
+        b_dict = dict(b)
+        dt = datetime.fromtimestamp(b_dict['add_date'] if b_dict['add_date'] else time.time())
+        b_dict['formatted_date'] = dt.strftime('%B %d, %Y %I:%M:%S %p GMT+02:00')
+        b_dict['date_str'] = dt.strftime('%Y-%m-%d')
+        formatted_bookmarks.append(b_dict)
+
+    # On réutilise ton template principal avec un filtre global ou un titre adapté si besoin
+    return render_template_string(
+        HTML_TEMPLATE, 
+        bookmarks=formatted_bookmarks, 
+        search="", 
+        tag_filter="", 
+        page=1, 
+        total_pages=1,
+        total_items=len(formatted_bookmarks),
+        filtered_total=len(formatted_bookmarks),
+        per_page=len(formatted_bookmarks) if formatted_bookmarks else 20
+    )
     
     formatted_bookmarks = []
     for b in bookmarks:
         b_dict = dict(b)
         dt = datetime.fromtimestamp(b_dict['add_date'] if b_dict['add_date'] else time.time())
         b_dict['formatted_date'] = dt.strftime('%B %d, %Y %I:%M:%S %p GMT+02:00')
+        b_dict['date_str'] = dt.strftime('%Y-%m-%d')  # <--- Ajoute cette ligne ici !
         formatted_bookmarks.append(b_dict)
     
     return render_template_string(
@@ -370,7 +397,54 @@ def delete(id):
     conn.close()
     return redirect(url_for('index'))
 
+@app.route('/date/<date_str>')
+def bookmarks_by_date(date_str):
+    try:
+        start_dt = datetime.strptime(date_str, '%Y-%m-%d')
+        start_timestamp = int(start_dt.timestamp())
+        end_timestamp = start_timestamp + 86400  # + 24 heures
+    except ValueError:
+        return "Format de date invalide", 400
 
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+
+    # 1. Récupération des favoris de cette journée
+    cursor = conn.execute('''
+        SELECT * FROM bookmarks 
+        WHERE add_date >= ? AND add_date < ?
+        ORDER BY add_date DESC
+    ''', (start_timestamp, end_timestamp))
+    
+    bookmarks = cursor.fetchall()
+
+    # 2. Récupérer aussi tous les tags globaux (au cas où le template en a besoin pour la sidebar/les menus)
+    all_tags_cursor = conn.execute("SELECT DISTINCT tags FROM bookmarks WHERE tags IS NOT NULL")
+    # (Adapte cette ligne selon la façon dont tu récupères tes tags dans index())
+    
+    conn.close()
+
+    # Formatage des favoris
+    formatted_bookmarks = []
+    for b in bookmarks:
+        b_dict = dict(b)
+        dt = datetime.fromtimestamp(b_dict['add_date'] if b_dict['add_date'] else time.time())
+        b_dict['formatted_date'] = dt.strftime('%B %d, %Y %I:%M:%S %p GMT+02:00')
+        b_dict['date_str'] = dt.strftime('%Y-%m-%d')
+        formatted_bookmarks.append(b_dict)
+
+    # 3. On passe TOUTES les variables qu'attend HTML_TEMPLATE (comme dans index())
+    return render_template_string(
+        HTML_TEMPLATE, 
+        bookmarks=formatted_bookmarks, 
+        search="", 
+        tag_filter="", 
+        page=1, 
+        total_pages=1,
+        total_items=len(formatted_bookmarks),
+        filtered_total=len(formatted_bookmarks),
+        per_page=20
+    )
 # Templates HTML
 
 HTML_TEMPLATE = '''
@@ -499,7 +573,7 @@ HTML_TEMPLATE = '''
                     <input type="checkbox">
                     <a href="/edit/{{ b.id }}" title="Éditer">📝</a>
                     <a href="/delete/{{ b.id }}" title="Supprimer" onclick="return confirm('Confirmer la suppression ?');">🗑️</a>
-                    <span>🕒 {{ b.formatted_date }}</span>
+                    <span>🕒 <a href="/date/{{ b.date_str }}" title="Voir les favoris de ce jour" style="color: inherit; text-decoration: none;">{{ b.formatted_date }}</a></span>
                 </div>
                 <div class="bookmark-url-display">🔗 <a href="{{ b.url }}" target="_blank">{{ b.url }}</a></div>
             </div>
