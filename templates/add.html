@@ -2,36 +2,160 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Ajouter un favori</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Ajouter un favori — Shared Bookmarks</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ecf0f1;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        /* Barre de navigation supérieure */
+        .navbar {
+            background-color: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        .navbar .brand {
+            font-size: 1.1rem;
+        }
+        
+        /* Conteneur principal de la page */
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+        }
+
+        h2 {
+            color: #27ae60;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        /* Formulaire */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 0.95krem;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #27ae60;
+            outline: none;
+            box-shadow: 0 0 5px rgba(39, 174, 96, 0.2);
+        }
+        textarea {
+            resize: vertical;
+            height: 120px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .checkbox-group input {
+            cursor: pointer;
+        }
+
+        /* Bouton d'enregistrement vert */
+        .btn-submit {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: #219653;
+        }
+    </style>
 </head>
 <body>
-    <div class="container" style="max-width: 600px; margin: 40px auto; padding: 20px;">
-        <h2>Ajouter un favori</h2>
-        
+
+    <!-- Barre de navigation identique à l'accueil -->
+    <div class="navbar">
+        <div class="brand">
+            <a href="/">⭐ Shared Bookmarks</a>
+            <a href="/add" style="margin-left: 10px;">+ Shaare</a>
+            <a href="/tags-by-year">Outils</a>
+        </div>
+    </div>
+
+    <!-- Boîte du formulaire -->
+    <div class="container">
+        <h2>Nouveau Shaare</h2>
+
         <form method="POST">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="url"><strong>URL :</strong></label><br>
-                <input type="text" id="url" name="url" value="{{ url }}" required style="width: 100%; padding: 8px;">
+            <div class="form-group">
+                <label for="url">URL</label>
+                <input type="text" id="url" name="url" value="{{ bookmark.url }}" required>
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="title"><strong>Titre :</strong></label><br>
-                <input type="text" id="title" name="title" value="{{ title }}" style="width: 100%; padding: 8px;">
+            <div class="form-group">
+                <label for="title">Titre</label>
+                <input type="text" id="title" name="title" value="{{ bookmark.title }}">
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="desc"><strong>Description :</strong></label><br>
-                <textarea id="desc" name="desc" rows="4" style="width: 100%; padding: 8px;">{{ desc }}</textarea>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description">{{ bookmark.description }}</textarea>
             </div>
 
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label for="tags"><strong>Tags (séparés par des espaces ou virgules) :</strong></label><br>
-                <input type="text" id="tags" name="tags" placeholder="ex: python web dev" style="width: 100%; padding: 8px;">
+            <div class="form-group">
+                <label for="tags">Tags</label>
+                <!-- Champ avec autocomplétion par datalist -->
+                <input type="text" id="tags" name="tags" value="{{ bookmark.tags }}" list="existing-tags" placeholder="espaces ou virgules">
+                <datalist id="existing-tags">
+                    {% for tag in unique_tags %}
+                        <option value="{{ tag }}">
+                    {% endfor %}
+                </datalist>
             </div>
 
-            <button type="submit" class="btn" style="padding: 10px 20px; background-color: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer;">Enregistrer</button>
+            <div class="checkbox-group">
+                <input type="checkbox" id="private" name="private" {% if bookmark.private %}checked{% endif %}>
+                <label for="private" style="margin-bottom:0; cursor:pointer;">Privé</label>
+            </div>
+
+            <button type="submit" class="btn-submit">Enregistrer</button>
         </form>
     </div>
+
 </body>
 </html>
