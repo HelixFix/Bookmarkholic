@@ -362,7 +362,6 @@ def top_domains():
             tags_list = [t.strip().lower() for t in re.split(r'[,;\s]+', str(raw_tags)) if t.strip()]
 
             for t in tags_list:
-                # On ignore purement et simplement le tag no_tag
                 if t == 'no_tag':
                     continue
 
@@ -375,10 +374,8 @@ def top_domains():
                     tag_domain_counts[t] = {}
                 tag_domain_counts[t][domain] = tag_domain_counts[t].get(domain, 0) + 1
 
-    # Top 20 Global des domaines (filtré)
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
 
-    # Analyse de tous les tags valides
     all_tag_top_domains = []
     for tag, dom_dict in tag_domain_counts.items():
         sorted_doms_for_tag = sorted(dom_dict.items(), key=lambda x: x[1], reverse=True)
@@ -398,10 +395,9 @@ def top_domains():
             total_tag_occurrences = sum(dom_dict.values())
             all_tag_top_domains.append((tag, valid_dom, valid_count, total_tag_occurrences))
 
-    # Top 20 des tags (sans no_tag)
-    tag_top_domains = sorted(all_tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
+    # On peut par exemple envoyer une liste plus large (ex: top 50 ou tous) au template pour le tri global
+    tag_top_domains = sorted(all_tag_top_domains, key=lambda x: x[3], reverse=True)[:30]
 
-    # Domaines leaders (Top 5)
     primary_domain_freq = {}
     for tag, valid_dom, dom_count, total_count in all_tag_top_domains:
         if valid_dom not in blacklist:
@@ -409,7 +405,6 @@ def top_domains():
 
     sorted_primary_domains = sorted(primary_domain_freq.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # Domaines les plus polyvalents (Top 5)
     domain_distinct_tags_count = {}
     for dom, tags_set in domain_to_tags.items():
         if dom not in blacklist:
@@ -787,7 +782,7 @@ TOP_DOMAINS_TEMPLATE = """
 <html>
 <head><title>Top Domaines & Analyses</title></head>
 <body style="font-family: sans-serif; background: #e2e8f0; display: flex; justify-content: center; padding: 40px;">
-  <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 700px;">
+  <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 750px;">
 
     <!-- 1. Top Domaines Global -->
     <h2 style="color: #2f855a;">🌐 Top Domaines (Volume de liens)</h2>
@@ -797,30 +792,36 @@ TOP_DOMAINS_TEMPLATE = """
       {% endfor %}
     </ul>
 
-    <!-- 2. Top Tags & Domaine Principal -->
-    <h2 style="color: #2b6cb0; margin-top: 30px;">🏷️ Top Tags & Domaine Principal Associé</h2>
+    <!-- 2. Top Tags & Domaine Principal avec Bouton de Tri -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
+      <h2 style="color: #2b6cb0; margin: 0;">🏷️ Top Tags & Domaine Principal</h2>
+      <button onclick="toggleSort()" id="sort-btn" style="background: #2b6cb0; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+        Trier par : Fréquence du domaine principal (desc)
+      </button>
+    </div>
+
     {% if tag_top_domains %}
-      <ul>
+      <ul id="tags-list" style="margin-top: 15px;">
         {% for tag, top_dom, dom_count, total_count in tag_top_domains %}
-          <li>
-            <strong>{{ tag }}</strong> ({{ total_count }} occ.)
+          <li data-total="{{ total_count }}" data-domcount="{{ dom_count }}" style="margin-bottom: 6px;">
+            <strong>{{ tag }}</strong> (<span class="tot-occ">{{ total_count }}</span> occ.)
             ➔ <span style="color: #2c5282; font-weight: bold;">{{ top_dom }}</span>
-            <span style="color: #718096; font-size: 0.9em;">({{ dom_count }} fois)</span>
+            <span style="color: #718096; font-size: 0.9em;">(<span class="dom-occ">{{ dom_count }}</span> fois)</span>
           </li>
         {% endfor %}
       </ul>
     {% endif %}
 
-    <!-- 3. NOUVEAU : Domaines qui structurent le plus de tags (Leaders principaux) -->
-    <h2 style="color: #d69e2e; margin-top: 30px;">🏆 Domaines leaders (fréquence en tant que "Top Domaine")</h2>
+    <!-- 3. Domaines leaders -->
+    <h2 style="color: #d69e2e; margin-top: 30px;">🏆 Domaines leaders (Top 5)</h2>
     <ul>
       {% for domain, count in sorted_primary_domains %}
         <li><strong>{{ domain }}</strong> : leader sur <strong>{{ count }}</strong> tags différents</li>
       {% endfor %}
     </ul>
 
-    <!-- 4. NOUVEAU : Domaines les plus polyvalents (diversité de tags) -->
-    <h2 style="color: #805ad5; margin-top: 30px;">🔀 Domaines les plus polyvalents (Diversité de tags)</h2>
+    <!-- 4. Domaines polyvalents -->
+    <h2 style="color: #805ad5; margin-top: 30px;">🔀 Domaines les plus polyvalents (Top 5)</h2>
     <ul>
       {% for domain, distinct_count in sorted_domains_by_tags %}
         <li><strong>{{ domain }}</strong> : associé à <strong>{{ distinct_count }}</strong> tags uniques différents</li>
@@ -829,6 +830,42 @@ TOP_DOMAINS_TEMPLATE = """
 
     <p style="margin-top: 30px;"><a href="{{ url_for('index') }}" style="color: #553c9a; text-decoration: none;">← Retour aux outils</a></p>
   </div>
+
+  <script>
+    let sortedByTagVolume = true;
+
+    function toggleSort() {
+      const list = document.getElementById('tags-list');
+      const items = Array.from(list.getElementsByTagName('li'));
+      const btn = document.getElementById('sort-btn');
+
+      items.sort((a, b) => {
+        let valA, valB;
+        if (sortedByTagVolume) {
+          // Tri par nombre de fois du domaine principal associé (décroissant)
+          valA = parseInt(a.getAttribute('data-domcount'), 10);
+          valB = parseInt(b.getAttribute('data-domcount'), 10);
+        } else {
+          // Tri par volume total d'occurrences du tag (décroissant)
+          valA = parseInt(a.getAttribute('data-total'), 10);
+          valB = parseInt(b.getAttribute('data-total'), 10);
+        }
+        return valB - valA;
+      });
+
+      // Réinjection des éléments triés dans le DOM
+      items.forEach(item => list.appendChild(item));
+
+      // Mise à jour du texte du bouton
+      if (sortedByTagVolume) {
+        btn.innerText = "Trier par : Volume total du tag (desc)";
+      } else {
+        btn.innerText = "Trier par : Fréquence du domaine principal (desc)";
+      }
+
+      sortedByTagVolume = !sortedByTagVolume;
+    }
+  </script>
 </body>
 </html>
 """
