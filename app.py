@@ -404,14 +404,14 @@ def top_domains():
         if tag != 'no_tag' and valid_dom not in blacklist:
             primary_domain_freq[valid_dom] = primary_domain_freq.get(valid_dom, 0) + 1
 
-    sorted_primary_domains = sorted(primary_domain_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+    sorted_primary_domains = sorted(primary_domain_freq.items(), key=lambda x: x[1], reverse=True)[:5]
 
     # --- Domaines les plus polyvalents (Filtrés par la blacklist) ---
     domain_distinct_tags_count = {}
     for dom, tags_set in domain_to_tags.items():
         if dom not in blacklist:
             domain_distinct_tags_count[dom] = len(tags_set)
-    sorted_domains_by_tags = sorted(domain_distinct_tags_count.items(), key=lambda x: x[1], reverse=True)[:10]
+    sorted_domains_by_tags = sorted(domain_distinct_tags_count.items(), key=lambda x: x[1], reverse=True)[:5]
 
     return render_template_string(
         TOP_DOMAINS_TEMPLATE,
