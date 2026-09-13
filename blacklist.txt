@@ -15,3 +15,4 @@ www.amazon.fr
 fr.wikipedia.org
 steamcommunity.com
 www.neonmag.fr
+no_tag

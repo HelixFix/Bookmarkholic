@@ -361,13 +361,16 @@ def top_domains():
         if raw_tags and domain:
             tags_list = [t.strip().lower() for t in re.split(r'[,;\s]+', str(raw_tags)) if t.strip()]
 
-            if domain not in blacklist:
-                if domain not in domain_to_tags:
-                    domain_to_tags[domain] = set()
-                for t in tags_list:
+            for t in tags_list:
+                # On ignore purement et simplement le tag no_tag
+                if t == 'no_tag':
+                    continue
+
+                if domain not in blacklist:
+                    if domain not in domain_to_tags:
+                        domain_to_tags[domain] = set()
                     domain_to_tags[domain].add(t)
 
-            for t in tags_list:
                 if t not in tag_domain_counts:
                     tag_domain_counts[t] = {}
                 tag_domain_counts[t][domain] = tag_domain_counts[t].get(domain, 0) + 1
@@ -375,7 +378,7 @@ def top_domains():
     # Top 20 Global des domaines (filtré)
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
 
-    # Analyse complète de TOUS les tags avec la règle de repli hors blacklist
+    # Analyse de tous les tags valides
     all_tag_top_domains = []
     for tag, dom_dict in tag_domain_counts.items():
         sorted_doms_for_tag = sorted(dom_dict.items(), key=lambda x: x[1], reverse=True)
@@ -395,18 +398,18 @@ def top_domains():
             total_tag_occurrences = sum(dom_dict.values())
             all_tag_top_domains.append((tag, valid_dom, valid_count, total_tag_occurrences))
 
-    # Tri pour le top 20 visible des tags
+    # Top 20 des tags (sans no_tag)
     tag_top_domains = sorted(all_tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
 
-    # --- CALCUL GLOBAL DES DOMAINES LEADERS (Filtré par la blacklist) ---
+    # Domaines leaders (Top 5)
     primary_domain_freq = {}
     for tag, valid_dom, dom_count, total_count in all_tag_top_domains:
-        if tag != 'no_tag' and valid_dom not in blacklist:
+        if valid_dom not in blacklist:
             primary_domain_freq[valid_dom] = primary_domain_freq.get(valid_dom, 0) + 1
 
     sorted_primary_domains = sorted(primary_domain_freq.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # --- Domaines les plus polyvalents (Filtrés par la blacklist) ---
+    # Domaines les plus polyvalents (Top 5)
     domain_distinct_tags_count = {}
     for dom, tags_set in domain_to_tags.items():
         if dom not in blacklist:
