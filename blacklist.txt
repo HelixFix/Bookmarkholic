@@ -12,3 +12,6 @@ addons.mozilla.org
 play.google.com
 store.steampowered.com
 www.amazon.fr
+fr.wikipedia.org
+steamcommunity.com
+www.neonmag.fr

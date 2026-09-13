@@ -344,6 +344,7 @@ def top_domains():
 
     domains = {}
     tag_domain_counts = {}
+    domain_to_tags = {} # Pour suivre les tags uniques par domaine
 
     for row in rows:
         url = row[0]
@@ -354,12 +355,19 @@ def top_domains():
             match = re.findall(r'https?://([^/]+)', url)
             if match:
                 domain = match[0].lower()
-                # Global top domains : on ignore les domaines blacklistés
                 if domain not in blacklist:
                     domains[domain] = domains.get(domain, 0) + 1
 
         if raw_tags and domain:
             tags_list = [t.strip().lower() for t in re.split(r'[,;\s]+', str(raw_tags)) if t.strip()]
+
+            # Enregistrement des tags distincts par domaine (hors blacklist)
+            if domain not in blacklist:
+                if domain not in domain_to_tags:
+                    domain_to_tags[domain] = set()
+                for t in tags_list:
+                    domain_to_tags[domain].add(t)
+
             for t in tags_list:
                 if t not in tag_domain_counts:
                     tag_domain_counts[t] = {}
@@ -368,23 +376,19 @@ def top_domains():
     # Top 20 Global des domaines (filtré)
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
 
-    # Pour chaque tag, trouver le meilleur domaine non blacklisté (avec repli de sécurité)
+    # Construction du Top Tags & Domaine Principal
     tag_top_domains = []
     for tag, dom_dict in tag_domain_counts.items():
         sorted_doms_for_tag = sorted(dom_dict.items(), key=lambda x: x[1], reverse=True)
 
         valid_dom = None
         valid_count = 0
-
-        # 1. On cherche le premier domaine autorisé (hors blacklist)
         for dom, count in sorted_doms_for_tag:
             if dom not in blacklist:
                 valid_dom = dom
                 valid_count = count
                 break
 
-        # 2. Repli de sécurité : si tous les domaines du tag sont blacklistés,
-        # on prend quand même le top 1 pour ne pas faire disparaître le tag du classement
         if not valid_dom and sorted_doms_for_tag:
             valid_dom, valid_count = sorted_doms_for_tag[0]
 
@@ -392,10 +396,28 @@ def top_domains():
             total_tag_occurrences = sum(dom_dict.values())
             tag_top_domains.append((tag, valid_dom, valid_count, total_tag_occurrences))
 
-    # Tri final des tags par volume total d'occurrences
     tag_top_domains = sorted(tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
 
-    return render_template_string(TOP_DOMAINS_TEMPLATE, domains=sorted_domains, tag_top_domains=tag_top_domains)
+    # --- NOUVEAU 1 : Domaines les plus fréquents comme "Domaine Principal" des tags ---
+    primary_domain_freq = {}
+    for tag, valid_dom, dom_count, total_count in tag_top_domains:
+        if tag != 'no_tag': # On peut exclure no_tag si souhaité
+            primary_domain_freq[valid_dom] = primary_domain_freq.get(valid_dom, 0) + 1
+    sorted_primary_domains = sorted(primary_domain_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    # --- NOUVEAU 2 : Domaines possédant le plus de tags différents ---
+    domain_distinct_tags_count = {}
+    for dom, tags_set in domain_to_tags.items():
+        domain_distinct_tags_count[dom] = len(tags_set)
+    sorted_domains_by_tags = sorted(domain_distinct_tags_count.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    return render_template_string(
+        TOP_DOMAINS_TEMPLATE,
+        domains=sorted_domains,
+        tag_top_domains=tag_top_domains,
+        sorted_primary_domains=sorted_primary_domains,
+        sorted_domains_by_tags=sorted_domains_by_tags
+    )
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_bookmark():
@@ -758,33 +780,47 @@ RENAME_TAGS_TEMPLATE = '''<!DOCTYPE html><html lang="fr"><head><meta charset="UT
 TOP_DOMAINS_TEMPLATE = """
 <!doctype html>
 <html>
-<head><title>Top Domaines & Tags</title></head>
+<head><title>Top Domaines & Analyses</title></head>
 <body style="font-family: sans-serif; background: #e2e8f0; display: flex; justify-content: center; padding: 40px;">
-  <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 650px;">
+  <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 700px;">
 
     <!-- 1. Top Domaines Global -->
-    <h2 style="color: #2f855a;">🌐 Top Domaines</h2>
+    <h2 style="color: #2f855a;">🌐 Top Domaines (Volume de liens)</h2>
     <ul>
       {% for domain, count in domains %}
         <li><strong>{{ domain }}</strong> : {{ count }} liens</li>
       {% endfor %}
     </ul>
 
-    <!-- 2. Top Tags avec leur Domaine le plus fréquent -->
+    <!-- 2. Top Tags & Domaine Principal -->
     <h2 style="color: #2b6cb0; margin-top: 30px;">🏷️ Top Tags & Domaine Principal Associé</h2>
     {% if tag_top_domains %}
       <ul>
         {% for tag, top_dom, dom_count, total_count in tag_top_domains %}
           <li>
             <strong>{{ tag }}</strong> ({{ total_count }} occ.)
-            ➔ Principal domaine : <span style="color: #2c5282; font-weight: bold;">{{ top_dom }}</span>
+            ➔ <span style="color: #2c5282; font-weight: bold;">{{ top_dom }}</span>
             <span style="color: #718096; font-size: 0.9em;">({{ dom_count }} fois)</span>
           </li>
         {% endfor %}
-      <ul>
-    {% else %}
-      <p style="color: #718096; font-style: italic;">Aucun tag trouvé.</p>
+      </ul>
     {% endif %}
+
+    <!-- 3. NOUVEAU : Domaines qui structurent le plus de tags (Leaders principaux) -->
+    <h2 style="color: #d69e2e; margin-top: 30px;">🏆 Domaines leaders (fréquence en tant que "Top Domaine")</h2>
+    <ul>
+      {% for domain, count in sorted_primary_domains %}
+        <li><strong>{{ domain }}</strong> : leader sur <strong>{{ count }}</strong> tags différents</li>
+      {% endfor %}
+    </ul>
+
+    <!-- 4. NOUVEAU : Domaines les plus polyvalents (diversité de tags) -->
+    <h2 style="color: #805ad5; margin-top: 30px;">🔀 Domaines les plus polyvalents (Diversité de tags)</h2>
+    <ul>
+      {% for domain, distinct_count in sorted_domains_by_tags %}
+        <li><strong>{{ domain }}</strong> : associé à <strong>{{ distinct_count }}</strong> tags uniques différents</li>
+      {% endfor %}
+    </ul>
 
     <p style="margin-top: 30px;"><a href="{{ url_for('index') }}" style="color: #553c9a; text-decoration: none;">← Retour aux outils</a></p>
   </div>
