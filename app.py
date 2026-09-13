@@ -344,7 +344,7 @@ def top_domains():
 
     domains = {}
     tag_domain_counts = {}
-    domain_to_tags = {} # Pour suivre les tags uniques par domaine
+    domain_to_tags = {}
 
     for row in rows:
         url = row[0]
@@ -361,7 +361,6 @@ def top_domains():
         if raw_tags and domain:
             tags_list = [t.strip().lower() for t in re.split(r'[,;\s]+', str(raw_tags)) if t.strip()]
 
-            # Enregistrement des tags distincts par domaine (hors blacklist)
             if domain not in blacklist:
                 if domain not in domain_to_tags:
                     domain_to_tags[domain] = set()
@@ -376,8 +375,8 @@ def top_domains():
     # Top 20 Global des domaines (filtré)
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
 
-    # Construction du Top Tags & Domaine Principal
-    tag_top_domains = []
+    # 1. Analyse complète de TOUS les tags pour trouver leur domaine leader respectif
+    all_tag_top_domains = []
     for tag, dom_dict in tag_domain_counts.items():
         sorted_doms_for_tag = sorted(dom_dict.items(), key=lambda x: x[1], reverse=True)
 
@@ -394,18 +393,20 @@ def top_domains():
 
         if valid_dom:
             total_tag_occurrences = sum(dom_dict.values())
-            tag_top_domains.append((tag, valid_dom, valid_count, total_tag_occurrences))
+            all_tag_top_domains.append((tag, valid_dom, valid_count, total_tag_occurrences))
 
-    tag_top_domains = sorted(tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
+    # Tri pour l'affichage du Top 20 des tags
+    tag_top_domains = sorted(all_tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
 
-    # --- NOUVEAU 1 : Domaines les plus fréquents comme "Domaine Principal" des tags ---
+    # --- CALCUL GLOBAL (sur TOUS les tags de la base, hors 'no_tag') ---
     primary_domain_freq = {}
-    for tag, valid_dom, dom_count, total_count in tag_top_domains:
-        if tag != 'no_tag': # On peut exclure no_tag si souhaité
+    for tag, valid_dom, dom_count, total_count in all_tag_top_domains:
+        if tag != 'no_tag':
             primary_domain_freq[valid_dom] = primary_domain_freq.get(valid_dom, 0) + 1
+
     sorted_primary_domains = sorted(primary_domain_freq.items(), key=lambda x: x[1], reverse=True)[:10]
 
-    # --- NOUVEAU 2 : Domaines possédant le plus de tags différents ---
+    # --- Domaines les plus polyvalents ---
     domain_distinct_tags_count = {}
     for dom, tags_set in domain_to_tags.items():
         domain_distinct_tags_count[dom] = len(tags_set)
