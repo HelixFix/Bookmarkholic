@@ -323,32 +323,41 @@ def rename_tags():
             message = f"Tag renommé avec succès sur {updated_count} favoris."
     return render_template_string(RENAME_TAGS_TEMPLATE, message=message)
 
+# Fonction pour charger la blacklist depuis le fichier txt
+def load_blacklist():
+    blacklist = set()
+    if os.path.exists('blacklist.txt'):
+        with open('blacklist.txt', 'r', encoding='utf-8') as f:
+            for line in f:
+                domain = line.strip().lower()
+                if domain and not domain.startswith('#'):
+                    blacklist.add(domain)
+    return blacklist
+
 @app.route('/top-domains')
 def top_domains():
+    blacklist = load_blacklist()
+
     conn = sqlite3.connect(DB_NAME)
     rows = conn.execute("SELECT url, tags FROM bookmarks").fetchall()
     conn.close()
 
-    # 1. Votre Top Domaines existant (global)
     domains = {}
-
-    # 2. Dictionnaire pour croiser tag -> (compteur de domaines)
-    # Structure : tag_domain_counts['privacy']['korben.info'] = 15
     tag_domain_counts = {}
 
     for row in rows:
         url = row[0]
         raw_tags = row[1]
 
-        # Extraction du domaine
         domain = None
         if url:
             match = re.findall(r'https?://([^/]+)', url)
             if match:
                 domain = match[0].lower()
-                domains[domain] = domains.get(domain, 0) + 1
+                # Global top domains : on ignore les domaines blacklistés
+                if domain not in blacklist:
+                    domains[domain] = domains.get(domain, 0) + 1
 
-        # Extraction et association des tags avec ce domaine
         if raw_tags and domain:
             tags_list = [t.strip().lower() for t in re.split(r'[,;\s]+', str(raw_tags)) if t.strip()]
             for t in tags_list:
@@ -356,19 +365,34 @@ def top_domains():
                     tag_domain_counts[t] = {}
                 tag_domain_counts[t][domain] = tag_domain_counts[t].get(domain, 0) + 1
 
+    # Top 20 Global des domaines (filtré)
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
 
-    # Pour chaque tag, trouver LE domaine le plus fréquent associé
+    # Pour chaque tag, trouver le meilleur domaine non blacklisté (avec repli de sécurité)
     tag_top_domains = []
     for tag, dom_dict in tag_domain_counts.items():
-        if dom_dict:
-            # Trouve le domaine avec le max d'occurrences pour ce tag
-            top_dom, count = max(dom_dict.items(), key=lambda x: x[1])
-            # On peut calculer le nombre total d'occurrences du tag en additionnant tous ses domaines
-            total_tag_occurrences = sum(dom_dict.values())
-            tag_top_domains.append((tag, top_dom, count, total_tag_occurrences))
+        sorted_doms_for_tag = sorted(dom_dict.items(), key=lambda x: x[1], reverse=True)
 
-    # Tri des tags par nombre total d'occurrences décroissant (pour garder le même ordre que votre capture)
+        valid_dom = None
+        valid_count = 0
+
+        # 1. On cherche le premier domaine autorisé (hors blacklist)
+        for dom, count in sorted_doms_for_tag:
+            if dom not in blacklist:
+                valid_dom = dom
+                valid_count = count
+                break
+
+        # 2. Repli de sécurité : si tous les domaines du tag sont blacklistés,
+        # on prend quand même le top 1 pour ne pas faire disparaître le tag du classement
+        if not valid_dom and sorted_doms_for_tag:
+            valid_dom, valid_count = sorted_doms_for_tag[0]
+
+        if valid_dom:
+            total_tag_occurrences = sum(dom_dict.values())
+            tag_top_domains.append((tag, valid_dom, valid_count, total_tag_occurrences))
+
+    # Tri final des tags par volume total d'occurrences
     tag_top_domains = sorted(tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
 
     return render_template_string(TOP_DOMAINS_TEMPLATE, domains=sorted_domains, tag_top_domains=tag_top_domains)
