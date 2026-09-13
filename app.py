@@ -2,6 +2,8 @@ import os
 import time
 import sqlite3
 import re
+import io
+import csv
 from datetime import datetime
 from html.parser import HTMLParser
 from flask import Flask, render_template_string, request, redirect, url_for, Response, render_template
@@ -131,6 +133,36 @@ def index():
 @app.route('/tools')
 def tools():
     return render_template_string(TOOLS_TEMPLATE, message=request.args.get('message'))
+
+@app.route('/export/tags-csv')
+def export_tags_csv():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.execute("SELECT tags FROM bookmarks WHERE tags IS NOT NULL AND tags != ''")
+    rows = cursor.fetchall()
+    conn.close()
+
+    tag_counter = Counter()
+    for row in rows:
+        tags_raw = row[0]
+        tags_list = [t.strip().lower() for t in tags_raw.split() if t.strip()]
+        tag_counter.update(tags_list)
+
+    # Génération du CSV en mémoire vive (pas de fichier encombrant sur le disque)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Tag", "Occurrences"])
+
+    for tag, count in tag_counter.most_common():
+        writer.writerow([tag, count])
+
+    output.seek(0)
+
+    # Retourne le fichier sous forme de téléchargement HTTP
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=tags_occurrences.csv"}
+    )
 
 @app.route('/import', methods=['POST'])
 def import_bookmarks():
@@ -645,6 +677,13 @@ TOOLS_TEMPLATE = '''
             <p style="font-size: 0.9em; color: #555; margin-bottom: 15px;">Téléchargez l'intégralité de vos favoris au format Netscape/Shaarli.</p>
             <a href="/export" class="btn-green">Télécharger l'export HTML</a>
         </div>
+        <div class="tool-card">
+    <h3>Gestion des Tags</h3>
+    <p>Téléchargez la liste de tous vos tags ainsi que leur nombre d'utilisations au format CSV.</p>
+    <a href="/export/tags-csv" class="btn-export">
+        📥 Exporter les tags (CSV)
+    </a>
+</div>
     </div>
 </body>
 </html>
