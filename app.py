@@ -326,19 +326,52 @@ def rename_tags():
 @app.route('/top-domains')
 def top_domains():
     conn = sqlite3.connect(DB_NAME)
-    bookmarks = conn.execute("SELECT url FROM bookmarks").fetchall()
+    rows = conn.execute("SELECT url, tags FROM bookmarks").fetchall()
     conn.close()
-    
+
+    # 1. Votre Top Domaines existant (global)
     domains = {}
-    for b in bookmarks:
-        url = b[0]
-        match = re.findall(r'https?://([^/]+)', url)
-        if match:
-            domain = match[0].lower()
-            domains[domain] = domains.get(domain, 0) + 1
-            
+
+    # 2. Dictionnaire pour croiser tag -> (compteur de domaines)
+    # Structure : tag_domain_counts['privacy']['korben.info'] = 15
+    tag_domain_counts = {}
+
+    for row in rows:
+        url = row[0]
+        raw_tags = row[1]
+
+        # Extraction du domaine
+        domain = None
+        if url:
+            match = re.findall(r'https?://([^/]+)', url)
+            if match:
+                domain = match[0].lower()
+                domains[domain] = domains.get(domain, 0) + 1
+
+        # Extraction et association des tags avec ce domaine
+        if raw_tags and domain:
+            tags_list = [t.strip().lower() for t in re.split(r'[,;\s]+', str(raw_tags)) if t.strip()]
+            for t in tags_list:
+                if t not in tag_domain_counts:
+                    tag_domain_counts[t] = {}
+                tag_domain_counts[t][domain] = tag_domain_counts[t].get(domain, 0) + 1
+
     sorted_domains = sorted(domains.items(), key=lambda x: x[1], reverse=True)[:20]
-    return render_template_string(TOP_DOMAINS_TEMPLATE, domains=sorted_domains)
+
+    # Pour chaque tag, trouver LE domaine le plus fréquent associé
+    tag_top_domains = []
+    for tag, dom_dict in tag_domain_counts.items():
+        if dom_dict:
+            # Trouve le domaine avec le max d'occurrences pour ce tag
+            top_dom, count = max(dom_dict.items(), key=lambda x: x[1])
+            # On peut calculer le nombre total d'occurrences du tag en additionnant tous ses domaines
+            total_tag_occurrences = sum(dom_dict.values())
+            tag_top_domains.append((tag, top_dom, count, total_tag_occurrences))
+
+    # Tri des tags par nombre total d'occurrences décroissant (pour garder le même ordre que votre capture)
+    tag_top_domains = sorted(tag_top_domains, key=lambda x: x[3], reverse=True)[:20]
+
+    return render_template_string(TOP_DOMAINS_TEMPLATE, domains=sorted_domains, tag_top_domains=tag_top_domains)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_bookmark():
@@ -698,7 +731,42 @@ TAGS_BY_YEAR_TEMPLATE = '''<!DOCTYPE html><html lang="fr"><head><meta charset="U
 
 RENAME_TAGS_TEMPLATE = '''<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Renommer un tag</title><style>body{font-family:sans-serif;background:#dcdfdc;padding:30px;}.box{background:white;padding:20px;max-width:600px;margin:auto;border-radius:4px;}</style></head><body><div class="box"><h2 style="color:#1b7a43;">✏️ Renommer un tag</h2>{% if message %}<p style="color:green;font-weight:bold;">{{ message }}</p>{% endif %}<form method="POST"><label>Ancien nom :</label><input type="text" name="old_tag" required style="width:100%;padding:8px;margin-bottom:10px;"><label>Nouveau nom :</label><input type="text" name="new_tag" required style="width:100%;padding:8px;margin-bottom:15px;"><button type="submit" style="background:#1b7a43;color:white;border:none;padding:10px;width:100%;font-weight:bold;cursor:pointer;">Renommer</button></form><p style="margin-top:15px;"><a href="/tools">← Retour aux outils</a></p></div></body></html>'''
 
-TOP_DOMAINS_TEMPLATE = '''<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Top Domaines</title><style>body{font-family:sans-serif;background:#dcdfdc;padding:30px;}.box{background:white;padding:20px;max-width:600px;margin:auto;border-radius:4px;}</style></head><body><div class="box"><h2 style="color:#1b7a43;">🌐 Top Domaines</h2><ul>{% for dom, count in domains %}<li><b>{{ dom }}</b> : {{ count }} liens</li>{% endfor %}</ul><p><a href="/tools">← Retour aux outils</a></p></div></body></html>'''
+TOP_DOMAINS_TEMPLATE = """
+<!doctype html>
+<html>
+<head><title>Top Domaines & Tags</title></head>
+<body style="font-family: sans-serif; background: #e2e8f0; display: flex; justify-content: center; padding: 40px;">
+  <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 650px;">
+
+    <!-- 1. Top Domaines Global -->
+    <h2 style="color: #2f855a;">🌐 Top Domaines</h2>
+    <ul>
+      {% for domain, count in domains %}
+        <li><strong>{{ domain }}</strong> : {{ count }} liens</li>
+      {% endfor %}
+    </ul>
+
+    <!-- 2. Top Tags avec leur Domaine le plus fréquent -->
+    <h2 style="color: #2b6cb0; margin-top: 30px;">🏷️ Top Tags & Domaine Principal Associé</h2>
+    {% if tag_top_domains %}
+      <ul>
+        {% for tag, top_dom, dom_count, total_count in tag_top_domains %}
+          <li>
+            <strong>{{ tag }}</strong> ({{ total_count }} occ.)
+            ➔ Principal domaine : <span style="color: #2c5282; font-weight: bold;">{{ top_dom }}</span>
+            <span style="color: #718096; font-size: 0.9em;">({{ dom_count }} fois)</span>
+          </li>
+        {% endfor %}
+      <ul>
+    {% else %}
+      <p style="color: #718096; font-style: italic;">Aucun tag trouvé.</p>
+    {% endif %}
+
+    <p style="margin-top: 30px;"><a href="{{ url_for('index') }}" style="color: #553c9a; text-decoration: none;">← Retour aux outils</a></p>
+  </div>
+</body>
+</html>
+"""
 
 EDIT_TEMPLATE = '''
 <!DOCTYPE html>
